@@ -9,11 +9,11 @@ require 'spec_helper'
 #       response.status.should be(200)
 #     end
 #   end
-#   # end
+#  end
 
 
 
-  describe "Authentication" do
+describe "Authentication" do
 
   subject { page }
 
@@ -22,6 +22,12 @@ require 'spec_helper'
 
     it { should have_content('Sign in') }
     it { should have_title('Sign in') }
+
+    it { should_not have_link('Users') }
+    it { should_not have_link('Profile') }
+    it { should_not have_link('Settings') }
+    it { should_not have_link('Sign out', href: signout_path) }
+    it { should have_link('Sign in', href: signin_path) }
 
     describe "with invalid information" do
     	before {click_button "Sign in"}
@@ -34,12 +40,12 @@ require 'spec_helper'
       describe "after visiting another page" do
         before { click_link "Home" }
         # it { should_not have_selector('div.alert.alert-error') }
-        it { should have_error_message('Invalid') }
+        # it { should have_error_message('Invalid') }
       end
     end
-  end
+  
 
-  describe "with valid information" do
+    describe "with valid information" do
       let(:user) { FactoryGirl.create(:user) }
       # before do
       #   fill_in "Email",    with: user.email.upcase
@@ -60,6 +66,7 @@ require 'spec_helper'
         it { should have_link('Sign in') }
       end
     end
+  end
 
   describe "authorization" do
 
@@ -101,6 +108,19 @@ require 'spec_helper'
           it { should have_title('Sign in') }
         end
       end
+
+      describe "in the Microposts controller" do
+
+        describe "submitting to the create action" do
+          before { post microposts_path }
+          specify { expect(response).to redirect_to(signin_path) }
+        end
+
+        describe "submitting to the destroy action" do
+          before { delete micropost_path(FactoryGirl.create(:micropost)) }
+          specify { expect(response).to redirect_to(signin_path) }
+        end
+      end
     end
 
     describe "as wrong user" do
@@ -131,6 +151,34 @@ require 'spec_helper'
         specify { expect(response).to redirect_to(root_url) }
       end
     end
+
+    describe "as signed-in user " do
+      let(:user) { FactoryGirl.create(:user) }
+      before { sign_in user, no_capybara:true }
+      
+      describe "cannot access #new action" do
+        before { get new_user_path }
+        specify { response.should redirect_to(root_path) }
+      end
+
+      describe "cannot access #create action" do
+        before { post users_path(user) }
+        specify { response.should redirect_to(root_path) }
+      end
+
+      describe "as admin user" do
+        let(:admin) { FactoryGirl.create(:admin) }
+        before { sign_in admin, no_capybara: true }
+
+        describe "should not be able to delete themselves via #destroy action" do
+          specify do
+            expect { delete user_path(admin) }.not_to change(User, :count).by(-1)
+          end
+        end
+      end
+    end
+
+  
   end
 end
 
