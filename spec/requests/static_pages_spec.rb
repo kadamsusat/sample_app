@@ -30,7 +30,25 @@ describe "Static pages" do
           user.feed.each do |item|
             page.should have_selector("li##{item.id}", text: item.content)
           end
+
+        describe "micropost counts" do
+          before { click_link "delete", match: :first }
+          it "should be singular when count eq to 1" do
+            expect(page).to have_selector("span", text: "1 micropost")
+          end
         end
+
+        describe "follower/following counts" do
+          let(:other_user) { FactoryGirl.create(:user) }
+          before do
+            other_user.follow!(user)
+            visit root_path
+          end
+
+          it { should have_link("0 following", href: following_user_path(user)) }
+          it { should have_link("1 follower", href: followers_user_path(user)) }
+        end
+      end
     end
   end
 
@@ -68,6 +86,18 @@ describe "Static pages" do
     let(:page_title) { 'Sign up' }
 
     it_should_behave_like "all static pages"
+  end
+
+  describe "micropost pagination" do
+    let(:user) { FactoryGirl.create(:user) }
+    before do
+      31.times { FactoryGirl.create(:micropost, user: user) }
+      sign_in user
+      visit root_path
+    end
+    after { user.microposts.destroy_all }
+
+    it { should have_selector("div.pagination") }
   end
 
   it "should have the right links on the layout" do
